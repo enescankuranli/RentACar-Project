@@ -11,6 +11,8 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using Business.BusinessAspect.Autofac;
+using Core.Aspects.Autofac.Caching;
+using Core.Aspects.Performance;
 
 namespace Business.Concrete
 {
@@ -23,8 +25,8 @@ namespace Business.Concrete
         {
             _carDal = carDal;
         }
-
-        [SecuredOperation("car.add,admin")]
+        [CacheRemoveAspect("ICarService.Get")]
+        //[SecuredOperation("car.add,admin")]
         [ValidationAspect(typeof(CarValidator))]
         public IResult Add(Car car)
         {
@@ -33,17 +35,31 @@ namespace Business.Concrete
             return new SuccessResult(Messages.CarAdded);
         }
 
+        public IResult AddTransactionalTest(Car car)
+        {
+            Add(car);
+            if (car.DailyPrice < 70)
+            {
+                throw new Exception("");
+            }
+
+            Add(car);
+
+            return null;
+        }
+
         public IResult Delete(Car car)
         {
             _carDal.Delete(car);
             return new SuccessResult(Messages.Deleted);
         }
-
+        [CacheAspect]
+        [PerformanceAspect(5)]
         public IDataResult<List<Car>> GetAll()
         {
             return new SuccessDataResult<List<Car>>(_carDal.GetAll());
         }
-
+        [CacheAspect]
         public IDataResult<List<Car>> GetAllById(int id)
         {
             return new SuccessDataResult<List<Car>>(_carDal.GetAll(c => c.Id == id));
@@ -58,7 +74,7 @@ namespace Business.Concrete
         {
             return new SuccessDataResult<List<Car>>(_carDal.GetAll(c => c.ColourId == id));
         }
-
+        
         public IResult Update(Car car)
         {
             _carDal.Update(car);
